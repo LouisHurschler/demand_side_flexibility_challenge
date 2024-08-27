@@ -1,6 +1,10 @@
 data/
 data_heatpumps/
 data_small/
+results/
+general_uuid_sites/
+general_uuid_sites_cleaned/
+
 
 TODO.md
 

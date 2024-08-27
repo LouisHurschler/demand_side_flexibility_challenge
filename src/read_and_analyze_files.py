@@ -12,7 +12,7 @@ import math
 def add_trace(
     fig: go.Figure,
     df: pd.DataFrame,
-    len: int,
+    size: int,
     information_to_plot: list,
     name_plot: str,
     mask: list = None,
@@ -26,17 +26,17 @@ def add_trace(
         return
 
     if mask is None:
-        mask = [True] * len
+        mask = [True] * size
     else:
-        mask = mask[0:len]
+        mask = mask[0:size]
 
     for name in information_to_plot:
         # only plot numeric data
         if type(df[name].iloc[0]) is not str:
             fig.add_trace(
                 go.Scattergl(
-                    x=df["Timestamp"][0:len][mask],
-                    y=df[name][0:len][mask],
+                    x=df["Timestamp"][0:size][mask],
+                    y=df[name][0:size][mask],
                     name=name + name_plot,
                     mode="markers",
                     line=dict(width=1),
@@ -100,7 +100,6 @@ class EnflateData:
             with open(file) as f:
                 data = pd.DataFrame(json.load(f))
                 device_type = data["Device"]["0"]
-                key_list = list(data.keys())
 
                 match device_type:
                     case "Boiler":
@@ -259,14 +258,14 @@ class EnflateData:
                 add_trace(
                     fig=fig,
                     df=members_dict[member],
-                    len=sum(self.datapoints_per_day[member][0:days]),
+                    size=sum(self.datapoints_per_day[member][0:days]),
                     information_to_plot=information_to_plot,
                     name_plot="_" + member,
                 )
                 add_trace(
                     fig=fig,
                     df=members_dict[member],
-                    len=sum(self.datapoints_per_day[member][0:days]),
+                    size=sum(self.datapoints_per_day[member][0:days]),
                     information_to_plot=information_to_plot,
                     name_plot="_plot_only_sensor_1" + member,
                     mask=[id == 1 for id in members_dict[member]["Sensor ID"]],
@@ -274,7 +273,7 @@ class EnflateData:
                 add_trace(
                     fig=fig,
                     df=members_dict[member],
-                    len=sum(self.datapoints_per_day[member][0:days]),
+                    size=sum(self.datapoints_per_day[member][0:days]),
                     information_to_plot=information_to_plot,
                     name_plot="_plot_only_sensor_2" + member,
                     mask=[id == 2 for id in members_dict[member]["Sensor ID"]],
@@ -282,7 +281,7 @@ class EnflateData:
                 add_trace(
                     fig=fig,
                     df=members_dict[member],
-                    len=sum(self.datapoints_per_day[member][0:days]),
+                    size=sum(self.datapoints_per_day[member][0:days]),
                     information_to_plot=information_to_plot,
                     name_plot="_plot_only_sensor_3" + member,
                     mask=[id == 3 for id in members_dict[member]["Sensor ID"]],
@@ -393,4 +392,4 @@ if __name__ == "__main__":
     # Make shure that the right relative path is used.
     # This works if you are calling this python script outside the python folder,
     # e.g. with python3 src/read_and_analyze_files.py
-    data.store_datapoints_per_day(filename="results/" + timestamp + ".json")
+    data.store_datapoints_per_day(filename="../results/" + timestamp + ".json")
