@@ -4,6 +4,13 @@ import tkinter as tk
 from tkinter import filedialog as fd
 import datetime as dt
 
+def rename_keys(data: dict):
+    new_dict = dict()
+    for key in data.keys():
+        values = list(data[key].values())
+        new_dict[key] = {str(i+1): value for i, value in enumerate(values)}
+    return new_dict
+
 
 def cleanup_json(original_path: str, cleaned_path: str, last_date: dt.datetime):
     keys = [
@@ -64,15 +71,45 @@ def cleanup_json(original_path: str, cleaned_path: str, last_date: dt.datetime):
         for key in data.keys():
             for key_to_delete in keys_to_delete:
                 data[key].pop(key_to_delete, None)
+
+
+    if type == "Heatpump" or type == "Add.Heating":
+        keys_heatpump = [
+            key for key, device in data["Device"].items() if device == "Heatpump"
+        ]
+        data_heatpump = dict()
+        for key in data.keys():
+            data_heatpump[key] = dict()
+
+        for key in data.keys():
+            for key_heatpump in keys_heatpump:
+                data_heatpump[key][key_heatpump] = data[key][key_heatpump]
+                data[key].pop(key_heatpump, None)
+
+
+        name, ending = cleaned_path.split('.', 1)
+        filename_heatpump = name + "_heatpump.json"
+        filename_add_heat = name + "_add_heat.json"
+        if data_heatpump["Device"]:
+            with open(filename_heatpump, "w") as f:
+                json_str = json.dumps(rename_keys(data_heatpump), indent=4)
+                f.write(json_str)
+
+        if data["Device"]:
+            with open(filename_add_heat, "w") as f:
+                json_str = json.dumps(rename_keys(data), indent=4)
+                f.write(json_str)
+        return
+
     with open(cleaned_path, "w") as f:
-        json_str = json.dumps(data, indent=4)
+        json_str = json.dumps(rename_keys(data), indent=4)
         f.write(json_str)
 
 
 def get_filelist() -> list:
     """
     Function to get a list of all json files one wants to include in an analysis.
-    You have to have already created a directory and included all neccesairy json files before calling this function.
+    You have to have already created a directory and included all necessary json files before calling this function.
     """
 
     root = tk.Tk()

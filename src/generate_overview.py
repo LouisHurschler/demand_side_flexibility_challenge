@@ -8,6 +8,22 @@ import numpy as np
 import json
 import os
 from collections import OrderedDict
+import re
+
+
+def extract_four_digits(filename):
+    # Define the regex pattern to match exactly four digits before ".json"
+    pattern = r'(\d{4})'
+
+    # Use re.search to find the pattern in the filename
+    match = re.search(pattern, filename)
+
+    # Check if a match was found
+    if match:
+        # Extract and return the four-digit number
+        return int(match.group(1))
+    else:
+        return None
 
 
 def plot_distribution_from_results():
@@ -60,6 +76,8 @@ def get_filelist() -> list:
 def plot_directly_from_data():
     filelist = get_filelist()
     plt.figure(figsize=(20, 8))
+    IDs = dict()
+
     for i, file in enumerate(filelist):
         with open(file) as f:
             data = json.load(f)
@@ -73,18 +91,24 @@ def plot_directly_from_data():
         if type == "Boiler":
             color = "b"
             label = "Boiler"
-        elif type == "Heatpump" or type == "Add.Heating":
+        elif type == "Heatpump":
             color = "r"
             label = "Heatpump"
+        elif type == "Add.Heating":
+            color = "m"
+            label = "Additional Heating"
         else:
             color = "k"
             label = type
+
         x_values = [
             dt.datetime.strptime(x_value, "%Y-%m-%d %H:%M:%S") for x_value in x_values
         ]
+
         # choose following y_value to group values together which started arount the same time
         # y_values = np.ones(len(x_values)) * int(min(x_values).strftime('%M%d'))
         y_values = np.ones(len(x_values)) * i
+        IDs[i] = extract_four_digits(file)
         plt.plot(
             x_values, y_values, linestyle="None", marker=".", color=color, label=label
         )
@@ -93,15 +117,22 @@ def plot_directly_from_data():
     plt.xlabel("Days")
     plt.grid(True)
 
+    # plot additional information
+    x_lim = plt.gca().get_xlim()[1]
+
+    for height, value in IDs.items():
+        plt.text(x_lim - .5, height, str(value), fontsize=6, ha='right', va='center', color='red')
+
+
     # This trick removes multiple same labels
     handles, labels = plt.gca().get_legend_handles_labels()
     by_label = OrderedDict(zip(labels, handles))
     plt.legend(by_label.values(), by_label.keys())
 
     # plt.show()
-    plt.savefig("plots/data_distribution_from_data_original.png")
+    plt.savefig("../plots/data_distribution_from_data_original.png")
 
 
 if __name__ == "__main__":
-    plot_distribution_from_results()
-    # plot_directly_from_data()
+    # plot_distribution_from_results()
+    plot_directly_from_data()
