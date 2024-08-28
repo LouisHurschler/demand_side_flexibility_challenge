@@ -23,6 +23,7 @@
             ipython
             black
 
+            matplotlib
             numpy
             pandas
             tkinter

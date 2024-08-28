@@ -238,16 +238,19 @@ class EnflateData:
 
         fig = go.Figure()
         information_to_plot = [
-            "L1_avg_power_factor",
+            # "L1_avg_power_factor",
             # "L2_avg_power_factor",
             # "L3_avg_power_factor",
-            "L1_avg_voltage",
+            # "L1_avg_voltage",
             # "L2_avg_voltage",
             # "L3_avg_voltage",
-            "L1_avg_current",
+            # "L1_avg_current",
             # "L2_avg_current",
             # "L3_avg_current",
-            # "L1_app_energy",
+            # "relay_state"
+            "L1_app_energy",
+            "L2_app_energy",
+            "L3_app_energy",
         ]
         # information_to_plot = self.boilers.keys()
         # print(information_to_plot)
@@ -267,24 +270,16 @@ class EnflateData:
                     df=members_dict[member],
                     size=sum(self.datapoints_per_day[member][0:days]),
                     information_to_plot=information_to_plot,
-                    name_plot="_plot_only_sensor_1" + member,
-                    mask=[id == 1 for id in members_dict[member]["Sensor ID"]],
+                    name_plot="_plot_only_relay_1" + member,
+                    mask=[id == 1 for id in members_dict[member]["relay_state"]],
                 )
                 add_trace(
                     fig=fig,
                     df=members_dict[member],
                     size=sum(self.datapoints_per_day[member][0:days]),
                     information_to_plot=information_to_plot,
-                    name_plot="_plot_only_sensor_2" + member,
-                    mask=[id == 2 for id in members_dict[member]["Sensor ID"]],
-                )
-                add_trace(
-                    fig=fig,
-                    df=members_dict[member],
-                    size=sum(self.datapoints_per_day[member][0:days]),
-                    information_to_plot=information_to_plot,
-                    name_plot="_plot_only_sensor_3" + member,
-                    mask=[id == 3 for id in members_dict[member]["Sensor ID"]],
+                    name_plot="_plot_only_relay_0" + member,
+                    mask=[id == 0 for id in members_dict[member]["relay_state"]],
                 )
 
                 # add_trace(
