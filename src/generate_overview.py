@@ -13,7 +13,7 @@ import re
 
 def extract_four_digits(filename):
     # Define the regex pattern to match exactly four digits before ".json"
-    pattern = r'(\d{4})'
+    pattern = r"(\d{4})"
 
     # Use re.search to find the pattern in the filename
     match = re.search(pattern, filename)
@@ -85,52 +85,101 @@ def plot_directly_from_data():
         # do not look at this data if it is empty
         if not data:
             continue
-        x_values = data["Timestamp"].values()
+        x_values = np.array(list(data["Timestamp"].values()))
+
+        # mean_app_energy = (
+        #     sum(data["L1_app_energy"].values())
+        #     + sum(data["L2_app_energy"].values())
+        #     + sum(data["L3_app_energy"].values())
+        # ) / len(data["L1_app_energy"])
+        threshold_on = 1
+
+        mask_energy = [
+            data["relay_state"][idx] == threshold_on
+            for idx in data["relay_state"].keys()
+        ]
 
         type = list(data["Device"].values())[0]
         if type == "Boiler":
-            color = "b"
+            color_on = "darkblue"
+            color_off = "lightblue"
             label = "Boiler"
+
         elif type == "Heatpump":
-            color = "r"
+            color_on = "darkred"
+            color_off = "orange"
             label = "Heatpump"
+
         elif type == "Add.Heating":
-            color = "m"
+            color_on = "purple"
+            color_off = "pink"
             label = "Additional Heating"
+
         else:
-            color = "k"
+            color_on = "k"
+            color_off = "k"
             label = type
 
-        x_values = [
-            dt.datetime.strptime(x_value, "%Y-%m-%d %H:%M:%S") for x_value in x_values
+        x_values_on = [
+            dt.datetime.strptime(x_value, "%Y-%m-%d %H:%M:%S")
+            for x_value in x_values[mask_energy]
+        ]
+        x_values_off = [
+            dt.datetime.strptime(x_value, "%Y-%m-%d %H:%M:%S")
+            for x_value in x_values[np.invert(mask_energy)]
         ]
 
         # choose following y_value to group values together which started arount the same time
         # y_values = np.ones(len(x_values)) * int(min(x_values).strftime('%M%d'))
-        y_values = np.ones(len(x_values)) * i
+        y_values_on = np.ones(len(x_values[mask_energy])) * i
+        y_values_off = np.ones(len(x_values[np.invert(mask_energy)])) * i
         IDs[i] = extract_four_digits(file)
         plt.plot(
-            x_values, y_values, linestyle="None", marker=".", color=color, label=label
+            x_values_on,
+            y_values_on,
+            linestyle="None",
+            marker=".",
+            color=color_on,
+            label=label + " on",
+            markersize=1,
+        )
+        plt.plot(
+            x_values_off,
+            y_values_off,
+            linestyle="None",
+            marker=".",
+            color=color_off,
+            label=label + " off",
+            markersize=1,
         )
         print(f"file {file} read successfully! {int(i * 100 / len(filelist))}% done")
-    plt.title("Plot amount of data gathered at each day")
-    plt.xlabel("Days")
-    plt.grid(True)
+    plt.title("Amount of data gathered at each day")
+    plt.xlabel("Date")
+    # plt.grid(True)
 
     # plot additional information
     x_lim = plt.gca().get_xlim()[1]
 
     for height, value in IDs.items():
-        plt.text(x_lim - .5, height, str(value), fontsize=6, ha='right', va='center', color='red')
-
+        plt.text(
+            x_lim - 0.5,
+            height,
+            str(value),
+            fontsize=6,
+            ha="right",
+            va="center",
+            color="red",
+        )
 
     # This trick removes multiple same labels
     handles, labels = plt.gca().get_legend_handles_labels()
     by_label = OrderedDict(zip(labels, handles))
-    plt.legend(by_label.values(), by_label.keys())
+    plt.legend(by_label.values(), by_label.keys(), markerscale=5.0)
 
     # plt.show()
-    plt.savefig("../plots/data_distribution_from_data_original.png")
+    plt.savefig(
+        "../plots/data_distribution_from_data_conditional_relay_on.png", dpi=300
+    )
 
 
 if __name__ == "__main__":

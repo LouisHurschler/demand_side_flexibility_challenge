@@ -1,7 +1,4 @@
-data/
-data_cleaned
-data_heatpumps/
-data_small/
+data*/
 
 general_uuid_sites/
 general_uuid_sites_cleaned/

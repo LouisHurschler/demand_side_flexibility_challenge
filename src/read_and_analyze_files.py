@@ -96,10 +96,10 @@ class EnflateData:
         emob_list = []
         other_list = []
 
-        for file in list_files:
+        for i, file in enumerate(list_files):
             with open(file) as f:
                 data = pd.DataFrame(json.load(f))
-                device_type = data["Device"]["0"]
+                device_type = data["Device"].values[0]
 
                 match device_type:
                     case "Boiler":
@@ -114,7 +114,9 @@ class EnflateData:
                     case _:
                         print(f"ERROR: device detected of type {device_type}")
                         other_list.append(data)
-                print(f"file {file} read")
+                print(
+                    f"file {file} read, {int(float(i * 100) / len(list_files))}% done"
+                )
 
         print("data read")
 
@@ -244,13 +246,13 @@ class EnflateData:
             # "L1_avg_voltage",
             # "L2_avg_voltage",
             # "L3_avg_voltage",
-            # "L1_avg_current",
-            # "L2_avg_current",
-            # "L3_avg_current",
-            # "relay_state"
-            "L1_app_energy",
-            "L2_app_energy",
-            "L3_app_energy",
+            "L1_avg_current",
+            "L2_avg_current",
+            "L3_avg_current",
+            "relay_state",
+            # "L1_app_energy",
+            # "L2_app_energy",
+            # "L3_app_energy",
         ]
         # information_to_plot = self.boilers.keys()
         # print(information_to_plot)
@@ -380,7 +382,7 @@ if __name__ == "__main__":
         list_files,
     )
     # data.print_info()
-    data.plot_data(days=3)
+    data.plot_data(days=14)
 
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
 
