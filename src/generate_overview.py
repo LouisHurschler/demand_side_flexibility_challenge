@@ -87,15 +87,18 @@ def plot_directly_from_data():
             continue
         x_values = np.array(list(data["Timestamp"].values()))
 
-        # mean_app_energy = (
-        #     sum(data["L1_app_energy"].values())
-        #     + sum(data["L2_app_energy"].values())
-        #     + sum(data["L3_app_energy"].values())
-        # ) / len(data["L1_app_energy"])
-        threshold_on = 1
+        # threshold_on = 1
+        # mask_energy = [
+        #     data["relay_state"][idx] == threshold_on
+        #     for idx in data["relay_state"].keys()
+        # ]
 
+        threshold_active = 1000000
         mask_energy = [
-            data["relay_state"][idx] == threshold_on
+            data["L1_active_energy"][idx]
+            + data["L2_active_energy"][idx]
+            + data["L3_active_energy"][idx]
+            >= threshold_active
             for idx in data["relay_state"].keys()
         ]
 
@@ -162,7 +165,7 @@ def plot_directly_from_data():
 
     for height, value in IDs.items():
         plt.text(
-            x_lim - 0.5,
+            x_lim - 0.1,
             height,
             str(value),
             fontsize=6,
@@ -177,9 +180,7 @@ def plot_directly_from_data():
     plt.legend(by_label.values(), by_label.keys(), markerscale=5.0)
 
     # plt.show()
-    plt.savefig(
-        "../plots/data_distribution_from_data_conditional_relay_on.png", dpi=300
-    )
+    plt.savefig("../plots/data_distribution_active_energy.png", dpi=300)
 
 
 if __name__ == "__main__":

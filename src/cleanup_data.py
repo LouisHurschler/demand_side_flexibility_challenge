@@ -5,7 +5,7 @@ from tkinter import filedialog as fd
 import datetime as dt
 
 
-def rename_keys(data: dict):
+def rename_keys(data: dict) -> dict:
     new_dict = dict()
     for key in data.keys():
         values = list(data[key].values())
@@ -15,35 +15,35 @@ def rename_keys(data: dict):
 
 def cleanup_json(original_path: str, cleaned_path: str, last_date: dt.datetime):
     keys = [
-        # "L1_avg_power_factor",
-        # "L1_min_power_factor",
-        # "L1_max_power_factor",
-        # "L2_avg_power_factor",
-        # "L2_min_power_factor",
-        # "L2_max_power_factor",
-        # "L3_avg_power_factor",
-        # "L3_min_power_factor",
-        # "L3_max_power_factor",
-        # "Total measurement count",
-        # "L1_avg_voltage",
-        # "L1_max_voltage",
-        # "L1_min_voltage",
-        # "L1_avg_current",
-        # "L1_max_current",
-        # "L1_min_current",
-        # "L2_avg_voltage",
-        # "L2_max_voltage",
-        # "L2_min_voltage",
-        # "L2_avg_current",
-        # "L2_max_current",
-        # "L2_min_current",
-        # "L3_avg_voltage",
-        # "L3_max_voltage",
-        # "L3_min_voltage",
-        # "Timestamp of first measurement",
-        # "L3_avg_current",
-        # "L3_max_current",
-        # "L3_min_current",
+        "L1_avg_power_factor",
+        "L1_min_power_factor",
+        "L1_max_power_factor",
+        "L2_avg_power_factor",
+        "L2_min_power_factor",
+        "L2_max_power_factor",
+        "L3_avg_power_factor",
+        "L3_min_power_factor",
+        "L3_max_power_factor",
+        "Total measurement count",
+        "L1_avg_voltage",
+        "L1_max_voltage",
+        "L1_min_voltage",
+        "L1_avg_current",
+        "L1_max_current",
+        "L1_min_current",
+        "L2_avg_voltage",
+        "L2_max_voltage",
+        "L2_min_voltage",
+        "L2_avg_current",
+        "L2_max_current",
+        "L2_min_current",
+        "L3_avg_voltage",
+        "L3_max_voltage",
+        "L3_min_voltage",
+        "Timestamp of first measurement",
+        "L3_avg_current",
+        "L3_max_current",
+        "L3_min_current",
         "Sensor ID",
         "iso_day",
         "iso_month",
@@ -89,20 +89,24 @@ def cleanup_json(original_path: str, cleaned_path: str, last_date: dt.datetime):
         name, ending = cleaned_path.split(".", 1)
         filename_heatpump = name + "_heatpump.json"
         filename_add_heat = name + "_add_heat.json"
-        if data_heatpump["Device"]:
+        # make shure it is not empty
+        if "Device" in data_heatpump.keys() and data_heatpump["Device"]:
             with open(filename_heatpump, "w") as f:
                 json_str = json.dumps(rename_keys(data_heatpump), indent=4)
                 f.write(json_str)
 
-        if data["Device"]:
+        # make shure it is not empty
+        if "Device" in data.keys() and data["Device"]:
             with open(filename_add_heat, "w") as f:
                 json_str = json.dumps(rename_keys(data), indent=4)
                 f.write(json_str)
         return
 
-    with open(cleaned_path, "w") as f:
-        json_str = json.dumps(rename_keys(data), indent=4)
-        f.write(json_str)
+    # make shure it is not empty
+    if "Device" in data.keys() and data["Device"]:
+        with open(cleaned_path, "w") as f:
+            json_str = json.dumps(rename_keys(data), indent=4)
+            f.write(json_str)
 
 
 def get_filelist() -> list:
@@ -128,7 +132,7 @@ def get_filelist() -> list:
 
 if __name__ == "__main__":
     filelist_to_get_and_store = get_filelist()
-    last_date = dt.datetime(year=2024, month=7, day=22)
+    last_date = dt.datetime(year=2024, month=8, day=28)
     for i, (original_file, cleaned_file) in enumerate(filelist_to_get_and_store):
         cleanup_json(original_file, cleaned_file, last_date)
         print(f"{int(float(i * 100) / len(filelist_to_get_and_store))}% done")
