@@ -87,76 +87,114 @@ def plot_directly_from_data():
             continue
         x_values = np.array(list(data["Timestamp"].values()))
 
-        # threshold_on = 1
-        # mask_energy = [
-        #     data["relay_state"][idx] == threshold_on
-        #     for idx in data["relay_state"].keys()
-        # ]
+        threshold_active = (
+            np.mean(list(data["L1_active_energy_diff"].values()))
+            + np.mean(list(data["L2_active_energy_diff"].values()))
+            + np.mean(list(data["L3_active_energy_diff"].values()))
+        ) / 3.0 + 1.0
 
-        threshold_active = 1000000
-        mask_energy = [
-            data["L1_active_energy"][idx]
-            + data["L2_active_energy"][idx]
-            + data["L3_active_energy"][idx]
-            >= threshold_active
+        mask_energy_active = [
+            data["L1_active_energy_diff"][idx]
+            + data["L2_active_energy_diff"][idx]
+            + data["L3_active_energy_diff"][idx]
+            > threshold_active
             for idx in data["relay_state"].keys()
+        ]
+        mask_relay = [
+            data["relay_state"][idx] == 1 for idx in data["relay_state"].keys()
         ]
 
         type = list(data["Device"].values())[0]
         if type == "Boiler":
-            color_on = "darkblue"
-            color_off = "lightblue"
+            color_on_energy = "blue"
+            color_off_energy = "lightblue"
             label = "Boiler"
 
         elif type == "Heatpump":
-            color_on = "darkred"
-            color_off = "orange"
+            color_on_energy = "darkred"
+            color_off_energy = "orange"
             label = "Heatpump"
 
         elif type == "Add.Heating":
-            color_on = "purple"
-            color_off = "pink"
+            color_on_energy = "purple"
+            color_off_energy = "pink"
             label = "Additional Heating"
 
         else:
-            color_on = "k"
-            color_off = "k"
+            color_on_energy = "k"
+            color_off_energy = "k"
             label = type
 
-        x_values_on = [
+        color_on_relay = "green"
+        color_off_relay = "red"
+
+        x_values_on_energy = [
             dt.datetime.strptime(x_value, "%Y-%m-%d %H:%M:%S")
-            for x_value in x_values[mask_energy]
+            for x_value in x_values[mask_energy_active]
         ]
-        x_values_off = [
+        x_values_off_energy = [
             dt.datetime.strptime(x_value, "%Y-%m-%d %H:%M:%S")
-            for x_value in x_values[np.invert(mask_energy)]
+            for x_value in x_values[np.invert(mask_energy_active)]
+        ]
+
+        x_values_on_relay = [
+            dt.datetime.strptime(x_value, "%Y-%m-%d %H:%M:%S")
+            for x_value in x_values[mask_relay]
+        ]
+        x_values_off_relay = [
+            dt.datetime.strptime(x_value, "%Y-%m-%d %H:%M:%S")
+            for x_value in x_values[np.invert(mask_relay)]
         ]
 
         # choose following y_value to group values together which started arount the same time
         # y_values = np.ones(len(x_values)) * int(min(x_values).strftime('%M%d'))
-        y_values_on = np.ones(len(x_values[mask_energy])) * i
-        y_values_off = np.ones(len(x_values[np.invert(mask_energy)])) * i
+        y_values_on_energy = np.ones(len(x_values[mask_energy_active])) * (2 * i + 1)
+        y_values_off_energy = np.ones(len(x_values[np.invert(mask_energy_active)])) * (
+            2 * i + 1
+        )
+        y_values_on_relay = np.ones(len(x_values[mask_relay])) * 2 * i
+        y_values_off_relay = np.ones(len(x_values[np.invert(mask_relay)])) * 2 * i
         IDs[i] = extract_four_digits(file)
+
         plt.plot(
-            x_values_on,
-            y_values_on,
+            x_values_off_relay,
+            y_values_off_relay,
             linestyle="None",
             marker=".",
-            color=color_on,
-            label=label + " on",
+            color=color_off_relay,
+            label=label + " relay off",
             markersize=1,
         )
         plt.plot(
-            x_values_off,
-            y_values_off,
+            x_values_on_relay,
+            y_values_on_relay,
             linestyle="None",
             marker=".",
-            color=color_off,
-            label=label + " off",
+            color=color_on_relay,
+            label=label + " relay on",
             markersize=1,
         )
+        plt.plot(
+            x_values_off_energy,
+            y_values_off_energy,
+            linestyle="None",
+            marker=".",
+            color=color_off_energy,
+            label="active energy low",
+            markersize=1,
+        )
+        plt.plot(
+            x_values_on_energy,
+            y_values_on_energy,
+            linestyle="None",
+            marker=".",
+            color=color_on_energy,
+            label="active energy high",
+            markersize=1,
+        )
+        print(f"id {IDs[i]} got threshold {threshold_active}")
         print(f"file {file} read successfully! {int(i * 100 / len(filelist))}% done")
-    plt.title("Amount of data gathered at each day")
+    plt.title("comparison of active energy and relay state")
     plt.xlabel("Date")
     # plt.grid(True)
 
@@ -166,7 +204,7 @@ def plot_directly_from_data():
     for height, value in IDs.items():
         plt.text(
             x_lim - 0.1,
-            height,
+            2 * height + 0.5,
             str(value),
             fontsize=6,
             ha="right",
@@ -180,7 +218,10 @@ def plot_directly_from_data():
     plt.legend(by_label.values(), by_label.keys(), markerscale=5.0)
 
     # plt.show()
-    plt.savefig("../plots/data_distribution_active_energy.png", dpi=300)
+    plt.savefig(
+        "../plots/data_distribution_active_energy_15_min_relay_state_boilers.png",
+        dpi=300,
+    )
 
 
 if __name__ == "__main__":

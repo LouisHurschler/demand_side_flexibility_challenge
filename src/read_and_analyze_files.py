@@ -246,10 +246,13 @@ class EnflateData:
             # "L1_avg_voltage",
             # "L2_avg_voltage",
             # "L3_avg_voltage",
+            "L1_active_energy_diff",
+            "L2_active_energy_diff",
+            "L3_active_energy_diff",
             "L1_active_energy",
-            # "L2_active_energy",
-            # "L3_active_energy",
-            "L1_reactive_energy",
+            "L2_active_energy",
+            "L3_active_energy",
+            # "L1_reactive_energy",
             # "L2_reactive_energy",
             # "L3_reactive_energy",
             # "relay_state",
@@ -275,7 +278,7 @@ class EnflateData:
                     df=members_dict[member],
                     size=sum(self.datapoints_per_day[member][0:days]),
                     information_to_plot=information_to_plot,
-                    name_plot="_plot_only_relay_1" + member,
+                    name_plot="_plot_only_relay_1_" + member,
                     mask=[id == 1 for id in members_dict[member]["relay_state"]],
                 )
                 add_trace(
@@ -283,7 +286,7 @@ class EnflateData:
                     df=members_dict[member],
                     size=sum(self.datapoints_per_day[member][0:days]),
                     information_to_plot=information_to_plot,
-                    name_plot="_plot_only_relay_0" + member,
+                    name_plot="_plot_only_relay_0_" + member,
                     mask=[id == 0 for id in members_dict[member]["relay_state"]],
                 )
 

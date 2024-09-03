@@ -5,16 +5,97 @@ from tkinter import filedialog as fd
 import datetime as dt
 
 
-def rename_keys(data: dict) -> dict:
+def sort_dict_according_to_timestamps(data: dict) -> dict:
+    """
+    Sorts all values of the data dictionary according to the date stored in the 'Timestamp'-dictionary.
+    Note that afterwards the keys will not be sorted. Example:
+    before: {
+        data1 : {
+            "1": 32,
+            "2": 12,
+            "3": -3,
+        },
+        Timestamp: {
+            "1": "2023-06-05 12:23:06",
+            "2": "2023-06-07 12:23:06",
+            "3": "2023-06-05 12:23:05",
+        }
+    }
+
+    afterwards: {
+        data1 : {
+            "3": -3,
+            "1": 32,
+            "2": 12,
+        },
+        Timestamp: {
+            "3": "2023-06-05 12:23:05",
+            "1": "2023-06-05 12:23:06",
+            "2": "2023-06-07 12:23:06",
+        },
+    }
+    """
+    idx_list_sorted = sorted(
+        data["Timestamp"].items(),
+        key=lambda item: dt.datetime.strptime(item[1], "%Y-%m-%d %H:%M:%S"),
+    )
+    data_new = {}
+    for key in data.keys():
+        data_new[key] = {}
+        for idx, _val in idx_list_sorted:
+            data_new[key][idx] = data[key][idx]
+    return data_new
+
+
+def sort_and_rename_keys(data: dict) -> dict:
+    """
+    reorder data sucht that they are sorted according to their timestamts
+    and the keys are ints in ascending orders
+    """
+
     new_dict = dict()
+    data = sort_dict_according_to_timestamps(data)
     for key in data.keys():
         values = list(data[key].values())
         new_dict[key] = {str(i + 1): value for i, value in enumerate(values)}
     return new_dict
 
 
-def cleanup_json(original_path: str, cleaned_path: str, last_date: dt.datetime):
-    keys = [
+def add_difference(data: dict, difference_list: list) -> dict:
+    """
+        Adds the difference of all members in difference_list to a new dictionary.
+        The value of posiiton 0 will be 0.0, otherwise the value of position i will
+        be the original value of position i minus the original value of position i-1
+    """
+    data = sort_and_rename_keys(data)
+    for name_difference in difference_list:
+        values = list(data[name_difference].values())
+        size = len(values)
+        diff = [0.0] + [
+            abs(value2 - value1)
+            for value1, value2 in zip(values[0 : size - 1], values[1:size])
+        ]
+        data[name_difference + "_diff"] = {}
+        for i, val in enumerate(diff):
+            data[name_difference + "_diff"][str(i + 1)] = val
+    return data
+
+
+def cleanup_json(
+    original_path: str,
+    cleaned_path: str,
+    last_date: dt.datetime,
+    delete_30_sec: bool = True,
+):
+    """
+        This function cleans all json files stated in original path.
+        This means that it will remove all entries which are stated in the keys list, 
+        For the remaining entries, it will delete all datapoints which are older than last_date, 
+        sorts them with respect to the Timestamp date and adds the differences of all members stated in 
+        list_difference.
+        if delete_30_sec is set to True, it will also delete all datapoints of type 30_seconds
+    """
+    keys_to_delete = [
         "L1_avg_power_factor",
         "L1_min_power_factor",
         "L1_max_power_factor",
@@ -58,20 +139,38 @@ def cleanup_json(original_path: str, cleaned_path: str, last_date: dt.datetime):
     type = list(data["Device"].values())[0]
     # do not use emobility
     if type == "eMob":
-        return
+        returneuler this node is malfunctioning
 
-    for key in keys:
+    for key in keys_to_delete:
         data.pop(key, None)
 
-    keys_to_delete = [
+    # Delete the datapoints of old data to get a overview of the most recent data
+    keys_to_delete_too_old_date = [
         key
         for key, date in data["Timestamp"].items()
         if dt.datetime.strptime(date, "%Y-%m-%d %H:%M:%S") < last_date
     ]
+
+    # split the data in two datasets of 15 min and 30 secs
+    if delete_30_sec:
+        keys_to_delete_30_sec = [
+            key
+            for key, duration in data["Frequency"].items()
+            if duration == "type_30_second"
+        ]
+
+        keys_to_delete = keys_to_delete_too_old_date or keys_to_delete_30_sec
+    else:
+        keys_to_delete = keys_to_delete_too_old_date
+
     if keys_to_delete:
         for key in data.keys():
             for key_to_delete in keys_to_delete:
                 data[key].pop(key_to_delete, None)
+
+    difference_list = ["L1_active_energy", "L2_active_energy", "L3_active_energy"]
+
+    data = add_difference(data, difference_list)
 
     if type == "Heatpump" or type == "Add.Heating":
         keys_heatpump = [
@@ -92,20 +191,20 @@ def cleanup_json(original_path: str, cleaned_path: str, last_date: dt.datetime):
         # make shure it is not empty
         if "Device" in data_heatpump.keys() and data_heatpump["Device"]:
             with open(filename_heatpump, "w") as f:
-                json_str = json.dumps(rename_keys(data_heatpump), indent=4)
+                json_str = json.dumps(sort_and_rename_keys(data_heatpump), indent=4)
                 f.write(json_str)
 
         # make shure it is not empty
         if "Device" in data.keys() and data["Device"]:
             with open(filename_add_heat, "w") as f:
-                json_str = json.dumps(rename_keys(data), indent=4)
+                json_str = json.dumps(sort_and_rename_keys(data), indent=4)
                 f.write(json_str)
         return
 
     # make shure it is not empty
     if "Device" in data.keys() and data["Device"]:
         with open(cleaned_path, "w") as f:
-            json_str = json.dumps(rename_keys(data), indent=4)
+            json_str = json.dumps(sort_and_rename_keys(data), indent=4)
             f.write(json_str)
 
 
