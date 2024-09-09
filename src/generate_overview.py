@@ -34,26 +34,43 @@ def plot_distribution_from_results():
     with open(path_json_data) as f:
         data = json.load(f)
 
-    plt.figure(figsize=(10, 6))
+    plt.figure(figsize=(6, 4))
     # plt.gca().xaxis.set_major_formatter(mdates.DateFormatter("%m/%d/%Y"))
     # plt.gca().xaxis.set_major_locator(mdates.DayLocator())
 
+    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter("%m/%d/%Y"))
+    plt.gca().xaxis.set_major_locator(mdates.DayLocator(interval=3))
+
     for datapoint in data.keys():
         # do not plot if empty
-        days = -np.linspace(0, len(data[datapoint]), len(data[datapoint]))
+        end_date = dt.datetime(2024, 9, 2)
+        start_date = end_date - dt.timedelta(days=len(data[datapoint]))
+        days = np.flip(mdates.drange(start_date, end_date, dt.timedelta(days=1)))
         data_to_plot = list(data[datapoint].values())
         # do not plot empty data
         if sum(data_to_plot) == 0:
             continue
-        plt.plot(days, data_to_plot, label=datapoint)
+        match datapoint:
+            case "boilers":
+                label = "Boilers"
+            case "heatpumps":
+                label = "Heatpumps"
+            case "Add.heatings":
+                label = "Additional Heatings"
+            case _:
+                label = datapoint
+
+        plt.plot(days, data_to_plot, label=label)
+
+    plt.gcf().autofmt_xdate()
 
     # plt.gcf().autofmt_xdate()
-    plt.title("Plot amount of data gathered at each day")
+    plt.title("Amount of data gathered at each day")
     plt.ylabel("#Datapoints")
-    plt.xlabel("Days")
+    plt.xlabel("Date")
     plt.legend()
     plt.grid(True)
-    plt.savefig("plots/data_distribution.pdf")
+    plt.savefig("plots/data_distribution.png", dpi=500, transparent=True)
 
 
 def get_filelist() -> list:
@@ -75,7 +92,7 @@ def get_filelist() -> list:
 
 def plot_directly_from_data():
     filelist = get_filelist()
-    plt.figure(figsize=(20, 8))
+    plt.figure(figsize=(6, 4))
     IDs = dict()
 
     for i, file in enumerate(filelist):
@@ -104,18 +121,18 @@ def plot_directly_from_data():
             data["relay_state"][idx] == 1 for idx in data["relay_state"].keys()
         ]
 
-        type = list(data["Device"].values())[0]
-        if type == "Boiler":
+        devie_type = list(data["Device"].values())[0]
+        if devie_type == "Boiler":
             color_on_energy = "blue"
             color_off_energy = "lightblue"
             label = "Boiler"
 
-        elif type == "Heatpump":
+        elif devie_type == "Heatpump":
             color_on_energy = "darkred"
             color_off_energy = "orange"
             label = "Heatpump"
 
-        elif type == "Add.Heating":
+        elif devie_type == "Add.Heating":
             color_on_energy = "purple"
             color_off_energy = "pink"
             label = "Additional Heating"
@@ -123,7 +140,7 @@ def plot_directly_from_data():
         else:
             color_on_energy = "k"
             color_off_energy = "k"
-            label = type
+            label = devie_type
 
         color_on_relay = "green"
         color_off_relay = "red"
@@ -146,6 +163,11 @@ def plot_directly_from_data():
             for x_value in x_values[np.invert(mask_relay)]
         ]
 
+        x_values_dates = [
+            dt.datetime.strptime(x_value, "%Y-%m-%d %H:%M:%S")
+            for x_value in x_values[:]
+        ]
+
         # choose following y_value to group values together which started arount the same time
         # y_values = np.ones(len(x_values)) * int(min(x_values).strftime('%M%d'))
         y_values_on_energy = np.ones(len(x_values[mask_energy_active])) * (2 * i + 1)
@@ -156,45 +178,56 @@ def plot_directly_from_data():
         y_values_off_relay = np.ones(len(x_values[np.invert(mask_relay)])) * 2 * i
         IDs[i] = extract_four_digits(file)
 
+        y_values = np.ones(len(x_values_dates)) * i
         plt.plot(
-            x_values_off_relay,
-            y_values_off_relay,
-            linestyle="None",
-            marker=".",
-            color=color_off_relay,
-            label=label + " relay off",
-            markersize=1,
-        )
-        plt.plot(
-            x_values_on_relay,
-            y_values_on_relay,
-            linestyle="None",
-            marker=".",
-            color=color_on_relay,
-            label=label + " relay on",
-            markersize=1,
-        )
-        plt.plot(
-            x_values_off_energy,
-            y_values_off_energy,
-            linestyle="None",
-            marker=".",
-            color=color_off_energy,
-            label="active energy low",
-            markersize=1,
-        )
-        plt.plot(
-            x_values_on_energy,
-            y_values_on_energy,
+            x_values_dates,
+            y_values,
             linestyle="None",
             marker=".",
             color=color_on_energy,
-            label="active energy high",
+            label=label,
             markersize=1,
         )
-        print(f"id {IDs[i]} got threshold {threshold_active}")
+
+        # plt.plot(
+        #     x_values_off_relay,
+        #     y_values_off_relay,
+        #     linestyle="None",
+        #     marker=".",
+        #     color=color_off_relay,
+        #     label=label + " relay off",
+        #     markersize=1,
+        # )
+        # plt.plot(
+        #     x_values_on_relay,
+        #     y_values_on_relay,
+        #     linestyle="None",
+        #     marker=".",
+        #     color=color_on_relay,
+        #     label=label + " relay on",
+        #     markersize=1,
+        # )
+        # plt.plot(
+        #     x_values_off_energy,
+        #     y_values_off_energy,
+        #     linestyle="None",
+        #     marker=".",
+        #     color=color_off_energy,
+        #     label="active energy low",
+        #     markersize=1,
+        # )
+        # plt.plot(
+        #     x_values_on_energy,
+        #     y_values_on_energy,
+        #     linestyle="None",
+        #     marker=".",
+        #     color=color_on_energy,
+        #     label="active energy high",
+        #     markersize=1,
+        # )
         print(f"file {file} read successfully! {int(i * 100 / len(filelist))}% done")
-    plt.title("comparison of active energy and relay state")
+
+    plt.title("overview of datapoints per site")
     plt.xlabel("Date")
     # plt.grid(True)
 
@@ -203,25 +236,26 @@ def plot_directly_from_data():
 
     for height, value in IDs.items():
         plt.text(
-            x_lim - 0.1,
-            2 * height + 0.5,
+            x_lim - 0.15,
+            height,
             str(value),
-            fontsize=6,
+            fontsize=3,
             ha="right",
             va="center",
             color="red",
         )
 
+    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter("%m/%d/%Y"))
+    plt.gca().xaxis.set_major_locator(mdates.DayLocator(interval=5))
     # This trick removes multiple same labels
     handles, labels = plt.gca().get_legend_handles_labels()
     by_label = OrderedDict(zip(labels, handles))
     plt.legend(by_label.values(), by_label.keys(), markerscale=5.0)
 
+    print("should save figure now")
     # plt.show()
-    plt.savefig(
-        "../plots/data_distribution_active_energy_15_min_relay_state_boilers.png",
-        dpi=300,
-    )
+    plt.savefig("../plots/data_distribution_15_days.png", dpi=300, transparent=True)
+    print("figure saved")
 
 
 if __name__ == "__main__":

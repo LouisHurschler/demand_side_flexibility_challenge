@@ -63,9 +63,9 @@ def sort_and_rename_keys(data: dict) -> dict:
 
 def add_difference(data: dict, difference_list: list) -> dict:
     """
-        Adds the difference of all members in difference_list to a new dictionary.
-        The value of posiiton 0 will be 0.0, otherwise the value of position i will
-        be the original value of position i minus the original value of position i-1
+    Adds the difference of all members in difference_list to a new dictionary.
+    The value of posiiton 0 will be 0.0, otherwise the value of position i will
+    be the original value of position i minus the original value of position i-1
     """
     data = sort_and_rename_keys(data)
     for name_difference in difference_list:
@@ -86,48 +86,52 @@ def cleanup_json(
     cleaned_path: str,
     last_date: dt.datetime,
     delete_30_sec: bool = True,
+    delete_15_min: bool = False,
 ):
     """
-        This function cleans all json files stated in original path.
-        This means that it will remove all entries which are stated in the keys list, 
-        For the remaining entries, it will delete all datapoints which are older than last_date, 
-        sorts them with respect to the Timestamp date and adds the differences of all members stated in 
-        list_difference.
-        if delete_30_sec is set to True, it will also delete all datapoints of type 30_seconds
+    This function cleans all json files stated in original path.
+    This means that it will remove all entries which are stated in the keys list,
+    For the remaining entries, it will delete all datapoints which are older than last_date,
+    sorts them with respect to the Timestamp date and adds the differences of all members stated in
+    list_difference.
+    if delete_30_sec is set to True, it will also delete all datapoints of type 30_seconds
     """
+    assert not delete_30_sec or not delete_15_min
+
+    # delete unused data to speedup generation of plots
     keys_to_delete = [
-        "L1_avg_power_factor",
-        "L1_min_power_factor",
-        "L1_max_power_factor",
-        "L2_avg_power_factor",
-        "L2_min_power_factor",
-        "L2_max_power_factor",
-        "L3_avg_power_factor",
-        "L3_min_power_factor",
-        "L3_max_power_factor",
-        "Total measurement count",
-        "L1_avg_voltage",
-        "L1_max_voltage",
-        "L1_min_voltage",
-        "L1_avg_current",
-        "L1_max_current",
-        "L1_min_current",
-        "L2_avg_voltage",
-        "L2_max_voltage",
-        "L2_min_voltage",
-        "L2_avg_current",
-        "L2_max_current",
-        "L2_min_current",
-        "L3_avg_voltage",
-        "L3_max_voltage",
-        "L3_min_voltage",
-        "Timestamp of first measurement",
-        "L3_avg_current",
-        "L3_max_current",
-        "L3_min_current",
-        "Sensor ID",
-        "iso_day",
-        "iso_month",
+        # "L1_avg_power_factor",
+        # "L1_min_power_factor",
+        # "L1_max_power_factor",
+        # "L2_avg_power_factor",
+        # "L2_min_power_factor",
+        # "L2_max_power_factor",
+        # "L3_avg_power_factor",
+        # "L3_min_power_factor",
+        # "L3_max_power_factor",
+        # "Total measurement count",
+        # "L1_avg_voltage",
+        # "L1_max_voltage",
+        # "L1_min_voltage",
+        # "L1_avg_current",
+        # "L1_max_current",
+        # "L1_min_current",
+        # "L2_avg_voltage",
+        # "L2_max_voltage",
+        # "L2_min_voltage",
+        # "L2_avg_current",
+        # "L2_max_current",
+        # "L2_min_current",
+        # "L3_avg_voltage",
+        # "L3_max_voltage",
+        # "L3_min_voltage",
+        # "Timestamp of first measurement",
+        # "L3_avg_current",
+        # "L3_max_current",
+        # "L3_min_current",
+        # "Sensor ID",
+        # "iso_day",
+        # "iso_month",
     ]
     with open(original_path, "r") as f:
         data = json.load(f)
@@ -139,7 +143,7 @@ def cleanup_json(
     type = list(data["Device"].values())[0]
     # do not use emobility
     if type == "eMob":
-        returneuler this node is malfunctioning
+        return
 
     for key in keys_to_delete:
         data.pop(key, None)
@@ -158,8 +162,14 @@ def cleanup_json(
             for key, duration in data["Frequency"].items()
             if duration == "type_30_second"
         ]
-
-        keys_to_delete = keys_to_delete_too_old_date or keys_to_delete_30_sec
+        keys_to_delete = keys_to_delete_too_old_date + keys_to_delete_30_sec
+    elif delete_15_min:
+        keys_to_delete_15_min = [
+            key
+            for key, duration in data["Frequency"].items()
+            if duration == "type_15_minutes"
+        ]
+        keys_to_delete = keys_to_delete_too_old_date + keys_to_delete_15_min
     else:
         keys_to_delete = keys_to_delete_too_old_date
 
@@ -231,7 +241,13 @@ def get_filelist() -> list:
 
 if __name__ == "__main__":
     filelist_to_get_and_store = get_filelist()
-    last_date = dt.datetime(year=2024, month=8, day=28)
+    last_date = dt.datetime(year=2024, month=8, day=15)
     for i, (original_file, cleaned_file) in enumerate(filelist_to_get_and_store):
-        cleanup_json(original_file, cleaned_file, last_date)
+        cleanup_json(
+            original_file,
+            cleaned_file,
+            last_date,
+            delete_30_sec=False,
+            delete_15_min=False,
+        )
         print(f"{int(float(i * 100) / len(filelist_to_get_and_store))}% done")

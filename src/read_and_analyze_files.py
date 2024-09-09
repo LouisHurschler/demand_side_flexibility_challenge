@@ -93,6 +93,7 @@ class EnflateData:
         print("starting with reading and sorting data")
         boilers_list = []
         heatpumps_list = []
+        add_heatings_list = []
         emob_list = []
         other_list = []
 
@@ -105,8 +106,11 @@ class EnflateData:
                     case "Boiler":
                         boilers_list.append(data)
 
-                    case "Heatpump" | "Add.Heating":
+                    case "Heatpump":
                         heatpumps_list.append(data)
+
+                    case "Add.Heating":
+                        add_heatings_list.append(data)
 
                     case "eMob":
                         emob_list.append(data)
@@ -141,6 +145,16 @@ class EnflateData:
         else:
             self.heatpumps = pd.DataFrame()
 
+        if len(add_heatings_list) != 0:
+            self.add_heatings = pd.concat(add_heatings_list)
+            print("start sorting add heatings")
+            self.add_heatings.sort_values(
+                by="Timestamp of last measurement", ascending=False, inplace=True
+            )
+            print("add heatings sorted")
+        else:
+            self.add_heatings = pd.DataFrame()
+
         if len(emob_list) != 0:
             self.emob = pd.concat(emob_list)
             print("start sorting emob")
@@ -165,10 +179,10 @@ class EnflateData:
         print("count number of datapoints per day")
 
         last_timestamp = get_last_timestamp(
-            [self.boilers, self.heatpumps, self.emob, self.other]
+            [self.boilers, self.heatpumps, self.add_heatings, self.emob, self.other]
         )
         first_timestamp = get_first_timestamp(
-            [self.boilers, self.heatpumps, self.emob, self.other]
+            [self.boilers, self.heatpumps, self.add_heatings, self.emob, self.other]
         )
         day = 60 * 60 * 24
         max_days = math.ceil((last_timestamp - first_timestamp) / day)
@@ -181,6 +195,7 @@ class EnflateData:
             {
                 "boilers": np.zeros(max_days, dtype=int),
                 "heatpumps": np.zeros(max_days, dtype=int),
+                "Add.heatings": np.zeros(max_days, dtype=int),
                 "emob": np.zeros(max_days, dtype=int),
                 "other": np.zeros(max_days, dtype=int),
             }
@@ -203,6 +218,10 @@ class EnflateData:
             self.datapoints_per_day["heatpumps"] = count_datapoints(
                 self.heatpumps, timestamps
             )
+        if not self.add_heatings.empty:
+            self.datapoints_per_day["Add.heatings"] = count_datapoints(
+                self.add_heatings, timestamps
+            )
         if not self.emob.empty:
             self.datapoints_per_day["emob"] = count_datapoints(self.emob, timestamps)
         if not self.other.empty:
@@ -214,6 +233,7 @@ class EnflateData:
         """
         print(f"amount of boiler datapoints: {len(self.boilers)}")
         print(f"amount of heatpump datapoints: {len(self.heatpumps)}")
+        print(f"amount of add heating datapoints: {len(self.add_heatings)}")
         print(f"amount of emob datapoints: {len(self.emob)}")
         print(f"amount of other datapoints: {len(self.other)}")
 
@@ -221,6 +241,8 @@ class EnflateData:
         print(self.boilers)
         print("Heatpumps data: ")
         print(self.heatpumps)
+        print("Add heatupump data: ")
+        print(self.add_heatings)
         print("Emob data: ")
         print(self.emob)
         print("other data: ")
@@ -234,6 +256,7 @@ class EnflateData:
         members_dict = {
             "boilers": self.boilers,
             "heatpumps": self.heatpumps,
+            "Add.heatings": self.add_heatings,
             "emob": self.emob,
             "other": self.other,
         }
