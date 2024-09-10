@@ -72,11 +72,9 @@ def add_difference(data: dict, difference_list: list) -> dict:
         values = list(data[name_difference].values())
         size = len(values)
         diff = [0.0] + [
-            value2 - value1
+            abs(value2 - value1)
             for value1, value2 in zip(values[0 : size - 1], values[1:size])
         ]
-        if sum(diff) < 0:
-            diff = -1.0 * diff
         data[name_difference + "_diff"] = {}
         for i, val in enumerate(diff):
             data[name_difference + "_diff"][str(i + 1)] = val
@@ -182,8 +180,6 @@ def cleanup_json(
 
     difference_list = ["L1_active_energy", "L2_active_energy", "L3_active_energy"]
 
-    data = add_difference(data, difference_list)
-
     if type == "Heatpump" or type == "Add.Heating":
         keys_heatpump = [
             key for key, device in data["Device"].items() if device == "Heatpump"
@@ -197,6 +193,8 @@ def cleanup_json(
                 data_heatpump[key][key_heatpump] = data[key][key_heatpump]
                 data[key].pop(key_heatpump, None)
 
+        data_heatpump = add_difference(data_heatpump, difference_list)
+        data = add_difference(data, difference_list)
         name, ending = cleaned_path.split(".", 1)
         filename_heatpump = name + "_heatpump.json"
         filename_add_heat = name + "_add_heat.json"
@@ -212,6 +210,7 @@ def cleanup_json(
                 json_str = json.dumps(sort_and_rename_keys(data), indent=4)
                 f.write(json_str)
         return
+    data = add_difference(data, difference_list)
 
     # make shure it is not empty
     if "Device" in data.keys() and data["Device"]:
@@ -243,7 +242,7 @@ def get_filelist() -> list:
 
 if __name__ == "__main__":
     filelist_to_get_and_store = get_filelist()
-    last_date = dt.datetime(year=2024, month=8, day=28)
+    last_date = dt.datetime(year=2024, month=8, day=31)
     for i, (original_file, cleaned_file) in enumerate(filelist_to_get_and_store):
         cleanup_json(
             original_file,
@@ -252,4 +251,6 @@ if __name__ == "__main__":
             delete_30_sec=False,
             delete_15_min=True,
         )
-        print(f"{int(float(i * 100) / len(filelist_to_get_and_store))}% done")
+        print(
+            f"{int(float(i * 100) / len(filelist_to_get_and_store))}% done: {cleaned_file}"
+        )

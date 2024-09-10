@@ -5,7 +5,7 @@ import datetime as dt
 import numpy as np
 import json
 import re
-
+import os
 
 
 def normalize(values: list) -> list:
@@ -62,13 +62,22 @@ def plot_data(path: str):
 
     plt.figure(figsize=(8, 4))
     # use diff values because other values store the absolute values
+    # multiply by 0.012 to get kW (units are 0.1Wh/30 sec)
     active_energy_values = [
-        data["L1_active_energy_diff"][idx]
-        + data["L2_active_energy_diff"][idx]
-        + data["L3_active_energy_diff"][idx]
+        (
+            data["L1_active_energy_diff"][idx]
+            + data["L2_active_energy_diff"][idx]
+            + data["L3_active_energy_diff"][idx]
+        )
+        * 0.012
         for idx in data["L1_active_energy_diff"].keys()
     ]
-    active_energy_values_running_mean = get_running_mean(active_energy_values, 1)
+
+    # if influence_range=0, no running mean is calculated
+    active_energy_values_running_mean = get_running_mean(
+        active_energy_values, influence_range=0
+    )
+    max_value = max(active_energy_values_running_mean)
 
     # convert strings of timestamps to datetime objects for plotting
     x_values = np.array(list(data["Timestamp"].values()))
@@ -76,28 +85,35 @@ def plot_data(path: str):
         dt.datetime.strptime(x_value, "%Y-%m-%d %H:%M:%S") for x_value in x_values
     ]
 
-    plt.plot(
-        x_values_dates,
-        data["relay_state"].values(),
-        marker=".",
-        color="0.8",
-        label="relay state",
-        markersize=1.0,
-    )
+    data_relay = [
+        max_value * relay_state for relay_state in data["relay_state"].values()
+    ]
+
+    # plt.plot(
+    #     x_values_dates,
+    #     data_relay,
+    #     marker=".",
+    #     color="0.8",
+    #     label="relay state",
+    #     markersize=1.0,
+    # )
+    plt.fill_between(x_values_dates, 0.0, data_relay, color="grey", label="relay on")
     plt.plot(
         x_values_dates,
         active_energy_values_running_mean,
         marker=".",
-        linestyle="None",
         color="r",
-        label="sum of active energy normalized",
-        markersize=2.0,
+        label="sum of active energy",
+        markersize=1.0,
     )
+    plt.fill_between(x_values_dates, 0.0, active_energy_values_running_mean, color="r")
 
     plt.title("Active Energy vs. relay state site " + str(site_number))
-    plt.ylabel("Relay state / normalized active energy")
+    plt.ylabel("power [kW]")
     plt.xlabel("Date")
     plt.legend(markerscale=10.0)
+
+    plt.margins(y=0)
     plt.savefig(
         "../plots/active_energy_vs_relay_site_" + str(site_number) + ".png",
         dpi=500,
@@ -105,10 +121,34 @@ def plot_data(path: str):
     )
 
 
+def get_filelist() -> list:
+    """
+    Function to get a list of all json files one wants to include in an analysis.
+    You have to have already created a directory and included all necessary json files before calling this function.
+    """
+
+    root = tk.Tk()
+    root.withdraw()
+    print("select the path of the directory where the json data is stored")
+    directory_path = fd.askdirectory()
+    os.makedirs(directory_path + "_cleaned", exist_ok=True)
+
+    filenames = os.listdir(directory_path)
+    filenames = [file for file in filenames if file.endswith(".json")]
+
+    return [directory_path + "/" + filename for filename in filenames]
+
+
 if __name__ == "__main__":
+    # plot one file
     root = tk.Tk()
     root.withdraw()
     print("select the path of the file where the json data is stored")
     path_enflate_data = fd.askopenfilename()
 
     plot_data(path_enflate_data)
+
+    # # plot all files
+    # files = get_filelist()
+    # for file in files:
+    #     plot_data(file)
