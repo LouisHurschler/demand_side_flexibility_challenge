@@ -1,15 +1,11 @@
 import tkinter as tk
 from tkinter import filedialog as fd
-import json
 import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
 import datetime as dt
 import numpy as np
 import json
-import os
-from collections import OrderedDict
 import re
-import math as mt
+
 
 
 def normalize(values: list) -> list:
@@ -72,9 +68,8 @@ def plot_data(path: str):
         + data["L3_active_energy_diff"][idx]
         for idx in data["L1_active_energy_diff"].keys()
     ]
-    active_energy_values_running_mean = normalize(
-        get_running_mean(active_energy_values, 1)
-    )
+    active_energy_values_running_mean = get_running_mean(active_energy_values, 1)
+
     # convert strings of timestamps to datetime objects for plotting
     x_values = np.array(list(data["Timestamp"].values()))
     x_values_dates = [
@@ -92,8 +87,8 @@ def plot_data(path: str):
     plt.plot(
         x_values_dates,
         active_energy_values_running_mean,
-        linestyle="None",
         marker=".",
+        linestyle="None",
         color="r",
         label="sum of active energy normalized",
         markersize=2.0,
@@ -104,7 +99,7 @@ def plot_data(path: str):
     plt.xlabel("Date")
     plt.legend(markerscale=10.0)
     plt.savefig(
-        "plots/active_energy_vs_relay_site_" + str(site_number) + ".png",
+        "../plots/active_energy_vs_relay_site_" + str(site_number) + ".png",
         dpi=500,
         transparent=True,
     )
