@@ -57,7 +57,7 @@ def sort_and_rename_keys(data: dict) -> dict:
     data = sort_dict_according_to_timestamps(data)
     for key in data.keys():
         values = list(data[key].values())
-        new_dict[key] = {str(i + 1): value for i, value in enumerate(values)}
+        new_dict[key] = {str(i): value for i, value in enumerate(values)}
     return new_dict
 
 
@@ -72,12 +72,17 @@ def add_difference(data: dict, difference_list: list) -> dict:
         values = list(data[name_difference].values())
         size = len(values)
         diff = [0.0] + [
-            abs(value2 - value1)
+            value2 - value1
             for value1, value2 in zip(values[0 : size - 1], values[1:size])
         ]
+        diff_abs = [abs(dif) for dif in diff]
         data[name_difference + "_diff"] = {}
+        data[name_difference + "_diff_negative_allowed"] = {}
+        for i, val in enumerate(diff_abs):
+            data[name_difference + "_diff"][str(i)] = val
+
         for i, val in enumerate(diff):
-            data[name_difference + "_diff"][str(i + 1)] = val
+            data[name_difference + "_diff_negative_allowed"][str(i)] = val
     return data
 
 
@@ -242,14 +247,14 @@ def get_filelist() -> list:
 
 if __name__ == "__main__":
     filelist_to_get_and_store = get_filelist()
-    last_date = dt.datetime(year=2024, month=8, day=31)
+    last_date = dt.datetime(year=2024, month=7, day=10)
     for i, (original_file, cleaned_file) in enumerate(filelist_to_get_and_store):
         cleanup_json(
             original_file,
             cleaned_file,
             last_date,
             delete_30_sec=False,
-            delete_15_min=True,
+            delete_15_min=False,
         )
         print(
             f"{int(float(i * 100) / len(filelist_to_get_and_store))}% done: {cleaned_file}"

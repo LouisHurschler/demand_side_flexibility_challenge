@@ -3,6 +3,7 @@ from tkinter import filedialog as fd
 import json
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import matplotlib.patches as mpatches
 import datetime as dt
 import numpy as np
 import json
@@ -24,6 +25,167 @@ def extract_four_digits(filename):
         return int(match.group(1))
     else:
         return None
+
+
+def add_overview_of_signs(data: dict, i: int):
+
+    # currents under 1000 milliampere are just fluctuations
+    threshold_active = 1000
+
+    mask_energy_active = [
+        data["L1_avg_current"][idx]
+        + data["L2_avg_current"][idx]
+        + data["L3_avg_current"][idx]
+        > threshold_active
+        for idx in data["relay_state"].keys()
+    ]
+    is_active = any(mask_energy_active)
+
+    first_key = list(data["L1_active_energy"].keys())[0]
+    last_key = list(data["L1_active_energy"].keys())[-1]
+    active_energy_difference = [
+        data["L1_active_energy"][last_key] - data["L1_active_energy"][first_key],
+        data["L2_active_energy"][last_key] - data["L2_active_energy"][first_key],
+        data["L3_active_energy"][last_key] - data["L3_active_energy"][first_key],
+    ]
+    linewidth = "5"
+    if is_active:
+        if active_energy_difference[0] > 0:
+            color = "green"
+        else:
+            color = "red"
+        plt.plot([1, 2], [i, i], color=color, linewidth=linewidth)
+        if active_energy_difference[1] > 0:
+            color = "green"
+        else:
+            color = "red"
+        plt.plot([2, 3], [i, i], color=color, linewidth=linewidth)
+        if active_energy_difference[2] > 0:
+            color = "green"
+        else:
+            color = "red"
+        plt.plot([3, 4], [i, i], color=color, linewidth=linewidth)
+    else:
+        plt.plot([1, 4], [i, i], label="not running", color="grey", linewidth=linewidth)
+
+
+def add_energy_values_comparison(data: dict, i: int):
+    x_values = np.array(list(data["Timestamp"].values()))
+
+    threshold_active = (
+        np.mean(list(data["L1_active_energy_diff"].values()))
+        + np.mean(list(data["L2_active_energy_diff"].values()))
+        + np.mean(list(data["L3_active_energy_diff"].values()))
+    ) / 3.0 + 1.0
+
+    mask_energy_active = [
+        data["L1_active_energy_diff"][idx]
+        + data["L2_active_energy_diff"][idx]
+        + data["L3_active_energy_diff"][idx]
+        > threshold_active
+        for idx in data["relay_state"].keys()
+    ]
+
+    energy_values = [
+        data["L1_active_energy_diff"][idx]
+        + data["L2_active_energy_diff"][idx]
+        + data["L3_active_energy_diff"][idx]
+        for idx in data["L1_active_energy_diff"].keys()
+    ]
+
+    x_values_dates = [
+        dt.datetime.strptime(x_value, "%Y-%m-%d %H:%M:%S") for x_value in x_values[:]
+    ]
+    y_values = np.ones(len(x_values_dates)) * i
+
+    mask_relay = [data["relay_state"][idx] == 1 for idx in data["relay_state"].keys()]
+
+    devie_type = list(data["Device"].values())[0]
+    if devie_type == "Boiler":
+        color_on_energy = "blue"
+        color_off_energy = "lightblue"
+        label = "Boiler"
+
+    elif devie_type == "Heatpump":
+        color_on_energy = "darkred"
+        color_off_energy = "orange"
+        label = "Heatpump"
+
+    elif devie_type == "Add.Heating":
+        color_on_energy = "purple"
+        color_off_energy = "pink"
+        label = "Additional Heating"
+
+    else:
+        color_on_energy = "k"
+        color_off_energy = "k"
+        label = devie_type
+
+    color_on_relay = "green"
+    color_off_relay = "red"
+
+    x_values_on_energy = [
+        dt.datetime.strptime(x_value, "%Y-%m-%d %H:%M:%S")
+        for x_value in x_values[mask_energy_active]
+    ]
+    x_values_off_energy = [
+        dt.datetime.strptime(x_value, "%Y-%m-%d %H:%M:%S")
+        for x_value in x_values[np.invert(mask_energy_active)]
+    ]
+
+    x_values_on_relay = [
+        dt.datetime.strptime(x_value, "%Y-%m-%d %H:%M:%S")
+        for x_value in x_values[mask_relay]
+    ]
+    x_values_off_relay = [
+        dt.datetime.strptime(x_value, "%Y-%m-%d %H:%M:%S")
+        for x_value in x_values[np.invert(mask_relay)]
+    ]
+
+    # choose following y_value to group values together which started arount the same time
+    y_values_on_energy = np.ones(len(x_values[mask_energy_active])) * (2 * i + 1)
+    y_values_off_energy = np.ones(len(x_values[np.invert(mask_energy_active)])) * (
+        2 * i + 1
+    )
+    y_values_on_relay = np.ones(len(x_values[mask_relay])) * 2 * i
+    y_values_off_relay = np.ones(len(x_values[np.invert(mask_relay)])) * 2 * i
+
+    plt.plot(
+        x_values_off_relay,
+        y_values_off_relay,
+        linestyle="None",
+        marker=".",
+        color=color_off_relay,
+        label=label + " relay off",
+        markersize=1,
+    )
+    plt.plot(
+        x_values_on_relay,
+        y_values_on_relay,
+        linestyle="None",
+        marker=".",
+        color=color_on_relay,
+        label=label + " relay on",
+        markersize=1,
+    )
+    plt.plot(
+        x_values_off_energy,
+        y_values_off_energy,
+        linestyle="None",
+        marker=".",
+        color=color_off_energy,
+        label="active energy low",
+        markersize=1,
+    )
+    plt.plot(
+        x_values_on_energy,
+        y_values_on_energy,
+        linestyle="None",
+        marker=".",
+        color=color_on_energy,
+        label="active energy high",
+        markersize=1,
+    )
 
 
 def plot_distribution_from_results():
@@ -102,126 +264,22 @@ def plot_directly_from_data():
         # do not look at this data if it is empty
         if not data:
             continue
-        x_values = np.array(list(data["Timestamp"].values()))
 
-        threshold_active = (
-            np.mean(list(data["L1_active_energy_diff"].values()))
-            + np.mean(list(data["L2_active_energy_diff"].values()))
-            + np.mean(list(data["L3_active_energy_diff"].values()))
-        ) / 3.0 + 1.0
+        add_overview_of_signs(data, i)
+        # add_energy_values_comparison(data, i)
 
-        mask_energy_active = [
-            data["L1_active_energy_diff"][idx]
-            + data["L2_active_energy_diff"][idx]
-            + data["L3_active_energy_diff"][idx]
-            > threshold_active
-            for idx in data["relay_state"].keys()
-        ]
-        mask_relay = [
-            data["relay_state"][idx] == 1 for idx in data["relay_state"].keys()
-        ]
-
-        devie_type = list(data["Device"].values())[0]
-        if devie_type == "Boiler":
-            color_on_energy = "blue"
-            color_off_energy = "lightblue"
-            label = "Boiler"
-
-        elif devie_type == "Heatpump":
-            color_on_energy = "darkred"
-            color_off_energy = "orange"
-            label = "Heatpump"
-
-        elif devie_type == "Add.Heating":
-            color_on_energy = "purple"
-            color_off_energy = "pink"
-            label = "Additional Heating"
-
-        else:
-            color_on_energy = "k"
-            color_off_energy = "k"
-            label = devie_type
-
-        color_on_relay = "green"
-        color_off_relay = "red"
-
-        x_values_on_energy = [
-            dt.datetime.strptime(x_value, "%Y-%m-%d %H:%M:%S")
-            for x_value in x_values[mask_energy_active]
-        ]
-        x_values_off_energy = [
-            dt.datetime.strptime(x_value, "%Y-%m-%d %H:%M:%S")
-            for x_value in x_values[np.invert(mask_energy_active)]
-        ]
-
-        x_values_on_relay = [
-            dt.datetime.strptime(x_value, "%Y-%m-%d %H:%M:%S")
-            for x_value in x_values[mask_relay]
-        ]
-        x_values_off_relay = [
-            dt.datetime.strptime(x_value, "%Y-%m-%d %H:%M:%S")
-            for x_value in x_values[np.invert(mask_relay)]
-        ]
-
-        # choose following y_value to group values together which started arount the same time
-        # y_values = np.ones(len(x_values)) * int(min(x_values).strftime('%M%d'))
-        y_values_on_energy = np.ones(len(x_values[mask_energy_active])) * (2 * i + 1)
-        y_values_off_energy = np.ones(len(x_values[np.invert(mask_energy_active)])) * (
-            2 * i + 1
-        )
-        y_values_on_relay = np.ones(len(x_values[mask_relay])) * 2 * i
-        y_values_off_relay = np.ones(len(x_values[np.invert(mask_relay)])) * 2 * i
         IDs[i] = extract_four_digits(file)
-
-        plt.plot(
-            x_values_off_relay,
-            y_values_off_relay,
-            linestyle="None",
-            marker=".",
-            color=color_off_relay,
-            label=label + " relay off",
-            markersize=1,
-        )
-        plt.plot(
-            x_values_on_relay,
-            y_values_on_relay,
-            linestyle="None",
-            marker=".",
-            color=color_on_relay,
-            label=label + " relay on",
-            markersize=1,
-        )
-        plt.plot(
-            x_values_off_energy,
-            y_values_off_energy,
-            linestyle="None",
-            marker=".",
-            color=color_off_energy,
-            label="active energy low",
-            markersize=1,
-        )
-        plt.plot(
-            x_values_on_energy,
-            y_values_on_energy,
-            linestyle="None",
-            marker=".",
-            color=color_on_energy,
-            label="active energy high",
-            markersize=1,
-        )
         print(f"file {file} read successfully! {int(i * 100 / len(filelist))}% done")
 
-    plt.title("overview of datapoints per site")
-    plt.xlabel("Date")
-    # plt.grid(True)
+    plt.title("overviews which flexibility records no, positive or negative energy")
 
     # plot additional information
     x_lim = plt.gca().get_xlim()[1]
 
     for height, value in IDs.items():
         plt.text(
-            x_lim - 0.5,
-            2 * height + 0.5,
+            x_lim - 0.05,
+            height,
             str(value),
             fontsize=6,
             ha="right",
@@ -229,19 +287,30 @@ def plot_directly_from_data():
             color="red",
         )
 
-    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter("%m/%d/%Y"))
-    plt.gca().xaxis.set_major_locator(mdates.DayLocator(interval=3))
-    # This trick removes multiple same labels
-    handles, labels = plt.gca().get_legend_handles_labels()
-    by_label = OrderedDict(zip(labels, handles))
-    plt.legend(by_label.values(), by_label.keys(), markerscale=10.0)
+    x = [1.5, 2.5, 3.5]
+    x_labels = ["L1", "L2", "L3"]
+    plt.xticks(x, x_labels)
+    plt.yticks([])
+    handles = [
+        mpatches.Patch(color="red", label="negative sign"),
+        mpatches.Patch(color="green", label="positive sign"),
+        mpatches.Patch(color="grey", label="no current"),
+    ]
+    plt.legend(handles=handles)
 
+    # plt.xlabel("Date")
+    # plt.grid(True)
+    # plt.gca().xaxis.set_major_formatter(mdates.DateFormatter("%m/%d/%Y"))
+    # plt.gca().xaxis.set_major_locator(mdates.DayLocator(interval=15))
+    # This trick removes multiple same labels
+    # handles, labels = plt.gca().get_legend_handles_labels()
+    # by_label = OrderedDict(zip(labels, handles))
+    # plt.legend(by_label.values(), by_label.keys(), markerscale=10.0)
 
     # plt.show()
-    plt.savefig("../plots/data_distribution_15_days.png", dpi=300)
-
+    plt.savefig("../plots/data_distribution_signs.png", dpi=300)
 
 
 if __name__ == "__main__":
-    plot_distribution_from_results()
-    # plot_directly_from_data()
+    # plot_distribution_from_results()
+    plot_directly_from_data()
