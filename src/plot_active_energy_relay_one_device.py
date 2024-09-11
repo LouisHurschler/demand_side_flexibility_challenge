@@ -131,10 +131,9 @@ def get_filelist() -> list:
     root.withdraw()
     print("select the path of the directory where the json data is stored")
     directory_path = fd.askdirectory()
-    os.makedirs(directory_path + "_cleaned", exist_ok=True)
 
     filenames = os.listdir(directory_path)
-    filenames = [file for file in filenames if file.endswith(".json")]
+    filenames = [file for file in filenames if file.endswith(".json") and not file.endswith("heat.json")]
 
     return [directory_path + "/" + filename for filename in filenames]
 
