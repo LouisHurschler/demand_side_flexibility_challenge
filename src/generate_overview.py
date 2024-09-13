@@ -50,17 +50,17 @@ def add_overview_of_signs(data: dict, i: int):
     ]
     linewidth = "5"
     if is_active:
-        if active_energy_difference[0] > 0:
+        if active_energy_difference[0] * data["L1_min_power_factor"]["0"] > 0:
             color = "green"
         else:
             color = "red"
         plt.plot([1, 2], [i, i], color=color, linewidth=linewidth)
-        if active_energy_difference[1] > 0:
+        if active_energy_difference[1] * data["L2_min_power_factor"]["0"] > 0:
             color = "green"
         else:
             color = "red"
         plt.plot([2, 3], [i, i], color=color, linewidth=linewidth)
-        if active_energy_difference[2] > 0:
+        if active_energy_difference[2] * data["L3_min_power_factor"]["0"] > 0:
             color = "green"
         else:
             color = "red"
@@ -168,24 +168,24 @@ def add_energy_values_comparison(data: dict, i: int):
         label=label + " relay on",
         markersize=1,
     )
-    plt.plot(
-        x_values_off_energy,
-        y_values_off_energy,
-        linestyle="None",
-        marker=".",
-        color=color_off_energy,
-        label="active energy low",
-        markersize=1,
-    )
-    plt.plot(
-        x_values_on_energy,
-        y_values_on_energy,
-        linestyle="None",
-        marker=".",
-        color=color_on_energy,
-        label="active energy high",
-        markersize=1,
-    )
+    # plt.plot(
+    #     x_values_off_energy,
+    #     y_values_off_energy,
+    #     linestyle="None",
+    #     marker=".",
+    #     color=color_off_energy,
+    #     label="active energy low",
+    #     markersize=1,
+    # )
+    # plt.plot(
+    #     x_values_on_energy,
+    #     y_values_on_energy,
+    #     linestyle="None",
+    #     marker=".",
+    #     color=color_on_energy,
+    #     label="active energy high",
+    #     markersize=1,
+    # )
 
 
 def plot_distribution_from_results():
@@ -271,7 +271,7 @@ def plot_directly_from_data():
         IDs[i] = extract_four_digits(file)
         print(f"file {file} read successfully! {int(i * 100 / len(filelist))}% done")
 
-    plt.title("overviews which flexibility records no, positive or negative energy")
+    plt.title("overviews of sign of energy")
 
     # plot additional information
     x_lim = plt.gca().get_xlim()[1]
@@ -302,7 +302,7 @@ def plot_directly_from_data():
     # plt.grid(True)
     # plt.gca().xaxis.set_major_formatter(mdates.DateFormatter("%m/%d/%Y"))
     # plt.gca().xaxis.set_major_locator(mdates.DayLocator(interval=15))
-    # This trick removes multiple same labels
+    # # This trick removes multiple same labels
     # handles, labels = plt.gca().get_legend_handles_labels()
     # by_label = OrderedDict(zip(labels, handles))
     # plt.legend(by_label.values(), by_label.keys(), markerscale=10.0)
