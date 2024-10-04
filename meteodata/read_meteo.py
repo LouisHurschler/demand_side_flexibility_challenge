@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 from matplotlib import pyplot as plt
 
@@ -6,7 +7,8 @@ def read_meteo():
     # Reads meteo data from .txt file as panda dataframe
 
     # File path to the .txt file
-    file_path = 'order_124794_data.txt'  # Replace with the actual path to your file
+    file_path = os.path.join(os.path.dirname(__file__),
+                             "order_124794_data.txt")
 
     # Read the .txt file into a pandas DataFrame
     meteo = pd.read_csv(file_path, sep=';')
